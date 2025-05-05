@@ -6,8 +6,8 @@ import { ReactCompareSlider } from "react-compare-slider";
 import { useRef, useState } from "react";
 
 export default function Home() {
-  const video1 = "";
-  const video2 = "";
+  const video1 = "efc65ca8c853dd06cf6129adfc3ae9b7";
+  const video2 = "efc65ca8c853dd06cf6129adfc3ae9b7";
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
