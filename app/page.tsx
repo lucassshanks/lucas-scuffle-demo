@@ -1,13 +1,12 @@
 "use client";
 import Image from "next/image";
 import styles from "./page.module.css";
-import { Stream, StreamPlayerApi } from "@cloudflare/stream-react";
 import { ReactCompareSlider } from "react-compare-slider";
 import { useRef, useState } from "react";
 
 export default function Home() {
-  const video1 = "efc65ca8c853dd06cf6129adfc3ae9b7";
-  const video2 = "efc65ca8c853dd06cf6129adfc3ae9b7";
+  const video1 = "";
+  const video2 = "";
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
@@ -16,17 +15,24 @@ export default function Home() {
   const [areVideosReady, setAreVideosReady] = useState(false);
   const [isVideoDescriptionLoaded, setIsVideoDescriptionLoaded] =
     useState(false);
+  const [seekTime, setSeekTime] = useState(""); // Add this line
 
-  const stream1Ref = useRef<StreamPlayerApi>(undefined);
-  const stream2Ref = useRef<StreamPlayerApi>(undefined);
+  const stream1Ref = useRef<HTMLVideoElement>(null);
+  const stream2Ref = useRef<HTMLVideoElement>(null);
   const compareSliderRef = useRef<HTMLElement>(null);
 
   const handleLogoLoad = () => {
     setIsLogoLoaded(true);
-    setTimeout(() => setIsDescriptionLoaded(true), 1000);
+    setTimeout(() => {
+      setIsDescriptionLoaded(true);
+      // Set videos ready 2 seconds after description
+      setTimeout(() => {
+        setAreVideosReady(true);
+        setTimeout(() => setIsVideoDescriptionLoaded(true), 1000);
+      }, 1000);
+    }, 1000);
   };
 
-  // Only show player once videos are loaded to prevent flickering on video/slider load
   const handleVideoLoad = () => {
     if (stream1Ref.current && stream2Ref.current) {
       setAreVideosReady(true);
@@ -37,19 +43,19 @@ export default function Home() {
   const togglePlayback = async () => {
     if (!stream1Ref.current || !stream2Ref.current) return;
 
-    const action = isPlaying ? "pause" : "play";
-    Promise.all([
-      stream1Ref.current[action](),
-      stream2Ref.current[action](),
-    ]).then(() => {
-      setIsPlaying((prev) => !prev);
-    });
+    if (isPlaying) {
+      stream1Ref.current.pause();
+      stream2Ref.current.pause();
+    } else {
+      await Promise.all([stream1Ref.current.play(), stream2Ref.current.play()]);
+    }
+    setIsPlaying(!isPlaying);
   };
 
   const toggleAudioPlayer1 = () => {
     if (!stream1Ref.current || !stream2Ref.current) return;
     stream1Ref.current.muted = !isMuted;
-    setIsMuted((prev) => !prev);
+    setIsMuted(!isMuted);
   };
 
   const toggleFullscreen = async () => {
@@ -58,6 +64,17 @@ export default function Home() {
       await compareSliderRef.current.requestFullscreen();
     } else {
       await document.exitFullscreen();
+    }
+  };
+
+  const handleSeek = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      const timeInSeconds = parseFloat(seekTime);
+      if (!isNaN(timeInSeconds) && stream1Ref.current && stream2Ref.current) {
+        stream1Ref.current.currentTime = timeInSeconds;
+        stream2Ref.current.currentTime = timeInSeconds;
+        setSeekTime("");
+      }
     }
   };
 
@@ -104,6 +121,17 @@ export default function Home() {
             <button onClick={toggleFullscreen} className={styles.controlButton}>
               Toggle Fullscreen
             </button>
+            <input
+              type="number"
+              value={seekTime}
+              onChange={(e) => setSeekTime(e.target.value)}
+              onKeyDown={handleSeek}
+              placeholder="Seek"
+              step="0.1"
+              min="0"
+              className={styles.controlButton}
+              style={{ width: "120px", padding: "0 8px" }}
+            />
           </div>
           <ReactCompareSlider
             style={{
@@ -114,31 +142,39 @@ export default function Home() {
             onlyHandleDraggable={true}
             itemOne={
               <div style={{ width: "100%", height: "100%" }}>
-                <Stream
-                  streamRef={stream1Ref}
+                <video
+                  ref={stream1Ref}
                   src={video1}
-                  responsive
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                  }}
                   muted={isMuted}
-                  onLoadedData={handleVideoLoad}
+                  playsInline
                 />
               </div>
             }
             itemTwo={
               <div style={{ width: "100%", height: "100%" }}>
-                <Stream
-                  streamRef={stream2Ref}
+                <video
+                  ref={stream2Ref}
                   src={video2}
-                  responsive
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                  }}
                   muted
-                  onLoadedData={handleVideoLoad}
+                  playsInline
                 />
               </div>
             }
           />
           <div className={styles.comparisonLabels}>
-            <span>H.264</span>
-            <hr className={styles.dividerLine} />
             <span>AV1</span>
+            <hr className={styles.dividerLine} />
+            <span>H.264</span>
           </div>
         </section>
         <section
